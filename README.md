@@ -1,35 +1,41 @@
 # gh-runner-image
 
-The container image behind tesserac-ai's self-hosted GitHub Actions runners
-on `runner1` (pve2). One container per job: the entrypoint starts the
-container's own `dockerd`, then the runner from a just-in-time config, and the
-container is gone with the job. The slots that run it live in
-`tesserac-infra`, role `gh_runner`.
+Ephemeral GitHub Actions runner with its own Docker daemon, on Ubuntu 26.04.
 
-Ubuntu 26.04 with what the org's workflows expect from `ubuntu-latest`
-without a setup action: git, git-lfs, gh, jq, make, build-essential, rsync,
-shellcheck, zstd, python3, docker with buildx and compose, passwordless sudo
-for uid 1001. The newest Node LTS, Python and Go sit in
-`/opt/hostedtoolcache`, so `setup-node`, `setup-python` and `setup-go` find
-them without a download; any other version they fetch per job.
-
-Nothing is pinned. `versions.sh` resolves the newest stable release of each
-part, the build checks every download against its upstream checksum, and the
-workflow builds, smoke-tests and pushes `ghcr.io/tesserac-ai/gh-runner-image`
-every night. GitHub refuses jobs to a runner more than 30 days behind its
-newest release; a nightly build keeps it a day behind at most.
-
-Tags: `latest`, the runner version, and the runner version with the build
-date.
-
-The container runs `--privileged`, which its own `dockerd` needs. A job that
-wants to can leave it for the VM; the VM is the trust boundary, not the
-container.
-
-Build and test locally:
+## Usage
 
 ```sh
-docker build $(./versions.sh | sed 's/^/--build-arg /') -t gh-runner:test .
-docker run --rm --privileged -v "$PWD/test/smoke.sh:/smoke.sh:ro" \
-  --entrypoint /usr/bin/dumb-init gh-runner:test -- bash /smoke.sh
+docker run --rm --privileged -e ACTIONS_RUNNER_INPUT_JITCONFIG \
+    ghcr.io/tesserac-ai/gh-runner-image
 ```
+
+`ACTIONS_RUNNER_INPUT_JITCONFIG` is the `encoded_jit_config` returned by
+`POST /orgs/{org}/actions/runners/generate-jitconfig`. The container starts
+`dockerd`, runs one job as uid 1001 and exits.
+
+## Contents
+
+- actions/runner, Docker with buildx and compose, gh
+- git, git-lfs, jq, make, build-essential, rsync, shellcheck, wget, zstd,
+  python3
+- Node LTS, Python and Go in `/opt/hostedtoolcache`
+- passwordless sudo
+
+## Build
+
+```sh
+docker build $(./versions.sh | sed 's/^/--build-arg /') -t gh-runner .
+docker run --rm --privileged -v "$PWD/test/smoke.sh:/smoke.sh:ro" \
+    gh-runner bash /smoke.sh
+```
+
+`versions.sh` prints the newest release of each component as build
+arguments. It needs `gh`, `curl` and `jq`. Downloads are verified: apt by
+signature, everything else by sha256.
+
+CI builds nightly and pushes `latest`, `<runner>` and `<runner>-<yyyymmdd>`
+with a provenance attestation.
+
+## Security
+
+The container runs privileged. Use it for trusted repositories only.
