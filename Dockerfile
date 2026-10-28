@@ -3,7 +3,8 @@ FROM ubuntu:26.04
 
 LABEL org.opencontainers.image.title=gh-runner-image \
       org.opencontainers.image.description="Ephemeral GitHub Actions runner with its own dockerd, on Ubuntu 26.04" \
-      org.opencontainers.image.source=https://github.com/tesserac-ai/gh-runner-image
+      org.opencontainers.image.source=https://github.com/tesserac-ai/gh-runner-image \
+      org.opencontainers.image.licenses=MIT
 
 # unpinned: versions.sh hands in the newest releases, ci rebuilds nightly
 ARG RUNNER_VERSION
