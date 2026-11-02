@@ -13,6 +13,11 @@ docker run --rm --privileged -e ACTIONS_RUNNER_INPUT_JITCONFIG \
 `POST /orgs/{org}/actions/runners/generate-jitconfig`. The container starts
 `dockerd`, runs one job as uid 1001 and exits.
 
+`DOCKER_REGISTRY_MIRROR`, a plain-http Docker Hub pull-through cache such as
+`http://172.28.4.2:5000`, goes into `daemon.json` and into buildx's
+`buildkitd.default.toml`, so `docker pull`, `services:` and buildx builds all
+pull Hub images through it.
+
 ## Contents
 
 - actions/runner, Docker with buildx and compose, gh
