@@ -23,6 +23,16 @@ node=("$tc"/node/*/x64/bin/node) go=("$tc"/go/*/x64/bin/go) py=("$tc"/Python/*/x
 "${go[0]}" version
 "${py[0]}" --version
 "${py[0]}" -m pip cache dir
+# what jobs call without a setup action
+node --version
+npm --version
+go version
+python --version
+rustup --version
+cargo --version
+cargo clippy --version
+ldconfig -p | grep -q libpangoft2-1.0
+"$JAVA_HOME_21_X64/bin/java" -version 2>&1 | head -1
 sudo -n true
 
 docker run --rm --memory 64m --cpus 0.5 busybox true

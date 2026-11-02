@@ -22,8 +22,10 @@ pull Hub images through it.
 
 - actions/runner, Docker with buildx and compose, gh
 - git, git-lfs, jq, make, build-essential, rsync, shellcheck, wget, zstd,
-  python3
-- Node LTS, Python and Go in `/opt/hostedtoolcache`
+  python3 as `python`, Pango and HarfBuzz for WeasyPrint
+- Node LTS, Python and Go in `/opt/hostedtoolcache`, Node and Go on `PATH`
+- rustup with stable, clippy and rustfmt
+- OpenJDK 21 as `JAVA_HOME` and `JAVA_HOME_21_X64`
 - passwordless sudo
 
 ## Build
