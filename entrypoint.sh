@@ -16,6 +16,24 @@ if [ -f /sys/fs/cgroup/cgroup.controllers ]; then
 		>/sys/fs/cgroup/cgroup.subtree_control
 fi
 
+# a docker.io pull-through handed in by the host; dockerd mirrors hub to it.
+# the mirror is plain http, so it also goes in insecure-registries or dockerd
+# drops it and falls back to hub without a word
+if [ -n "${DOCKER_REGISTRY_MIRROR:-}" ]; then
+	mkdir -p /etc/docker
+	host=${DOCKER_REGISTRY_MIRROR#*://}
+	printf '{"registry-mirrors":["%s"],"insecure-registries":["%s"]}\n' \
+		"$DOCKER_REGISTRY_MIRROR" "$host" >/etc/docker/daemon.json
+
+	# docker-container builders (setup-buildx-action) run their own buildkitd,
+	# which never sees daemon.json; buildx hands it this file instead
+	d=/home/runner/.docker/buildx
+	mkdir -p "$d"
+	printf '[registry."docker.io"]\n  mirrors = ["%s"]\n\n[registry."%s"]\n  http = true\n' \
+		"$host" "$host" >"$d/buildkitd.default.toml"
+	chown -R runner:runner /home/runner/.docker
+fi
+
 # own session: dumb-init signals only the runner's group, so dockerd
 # outlives the job's cancel
 setsid dockerd --group docker >/var/log/dockerd.log 2>&1 &
