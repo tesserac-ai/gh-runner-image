@@ -22,7 +22,12 @@ ENV DEBIAN_FRONTEND=noninteractive \
     RUNNER_TOOL_CACHE=/opt/hostedtoolcache \
     AGENT_TOOLSDIRECTORY=/opt/hostedtoolcache \
     RUNNER_MANUALLY_TRAP_SIG=1 \
-    ACTIONS_RUNNER_PRINT_LOG_TO_STDOUT=1
+    ACTIONS_RUNNER_PRINT_LOG_TO_STDOUT=1 \
+    JAVA_HOME=/usr/lib/jvm/java-21-openjdk-amd64 \
+    JAVA_HOME_21_X64=/usr/lib/jvm/java-21-openjdk-amd64 \
+    CARGO_HOME=/home/runner/.cargo \
+    RUSTUP_HOME=/home/runner/.rustup \
+    PATH=/home/runner/.cargo/bin:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin
 
 SHELL ["/bin/bash", "-euo", "pipefail", "-c"]
 
@@ -44,7 +49,9 @@ RUN apt-get update \
     && apt-get install -y --no-install-recommends \
        build-essential containerd.io docker-buildx-plugin docker-ce docker-ce-cli \
        docker-compose-plugin dumb-init file git git-lfs iproute2 iptables jq \
-       libicu78 libssl3t64 lsb-release make openssh-client pkg-config python3 \
+       libharfbuzz-subset0 libicu78 libpango-1.0-0 libpangoft2-1.0-0 libssl3t64 \
+       lsb-release make openjdk-21-jdk-headless openssh-client pkg-config \
+       python-is-python3 python3 \
        python3-pip python3-venv rsync shellcheck sudo tzdata unzip wget xz-utils \
        zip zstd \
     && rm -rf /var/lib/apt/lists/* \
@@ -74,6 +81,7 @@ RUN d="/opt/hostedtoolcache/node/${NODE_VERSION}/x64" \
        | grep " node-v${NODE_VERSION}-linux-x64.tar.xz$" | sha256sum -c - \
     && mkdir -p "$d" && tar -xJf "node-v${NODE_VERSION}-linux-x64.tar.xz" --strip-components=1 -C "$d" \
     && touch "$d.complete" && chown -R runner:runner /opt/hostedtoolcache/node \
+    && ln -s "$d"/bin/* /usr/local/bin/ \
     && rm ./*
 
 RUN d="/opt/hostedtoolcache/go/${GO_VERSION}/x64" \
@@ -83,6 +91,17 @@ RUN d="/opt/hostedtoolcache/go/${GO_VERSION}/x64" \
        | sha256sum -c - \
     && mkdir -p "$d" && tar -xzf "go${GO_VERSION}.linux-amd64.tar.gz" --strip-components=1 -C "$d" \
     && touch "$d.complete" && chown -R runner:runner /opt/hostedtoolcache/go \
+    && ln -s "$d"/bin/* /usr/local/bin/ \
+    && rm ./*
+
+# the hosted image ships rustup with stable; jobs install other toolchains
+RUN u=https://static.rust-lang.org/rustup/dist/x86_64-unknown-linux-gnu/rustup-init \
+    && curl -fsSLO "$u" \
+    && echo "$(curl -fsSL "$u.sha256" | cut -d' ' -f1)  rustup-init" | sha256sum -c - \
+    && chmod +x rustup-init \
+    && ./rustup-init -y -q --no-modify-path --profile minimal --default-toolchain stable \
+       -c clippy -c rustfmt \
+    && chown -R runner:runner "$CARGO_HOME" "$RUSTUP_HOME" \
     && rm ./*
 
 # setup.sh copies the working directory into $AGENT_TOOLSDIRECTORY/Python
